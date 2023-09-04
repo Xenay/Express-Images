@@ -36,17 +36,45 @@ const router = express.Router();
 
 // Load posts
 router.get("/", async (req, res) => {
-  const posts = await loadUserCollection();
-  res.send(await posts.find({}).toArray());
-});
+  try {
+    const users = await User.find({}); // Fetch all users
 
-//GET
-router.get("/:id", async (req, res) => {
-  console.log(req.params.id);
-  const users = await loadUserCollection();
-  const id2 = req.params.id;
-  //const id = req.params.id;
-  res.send(await users.find({ _id: id2 }).toArray());
+    // Map the users and their photos as in the second function
+    const usersWithPhotos = users.map((user) => {
+      const userData = {
+        _id: user._id,
+        name: user.name, // Include other user properties as needed
+        photos: [],
+      };
+
+      if (user.photos && user.photos.length > 0) {
+        userData.photos = user.photos.map((photo) => {
+          if (photo.data instanceof Buffer && photo.contentType) {
+            // Convert the buffer to a base64 string
+            const dataBuffer = photo.data;
+            return {
+              _id: photo._id,
+              url: photo.data,
+              type: photo.contentType,
+            };
+          } else {
+            return {
+              _id: photo._id,
+              url: "", // Provide a default URL or empty string if photo data or contentType is missing
+              type: "",
+            };
+          }
+        });
+      }
+
+      return userData;
+    });
+
+    res.send(usersWithPhotos);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send({ error: "Internal server error" });
+  }
 });
 //ADD
 
@@ -140,7 +168,7 @@ router.get("/:userId/photos", async (req, res) => {
 
     const imageUrls = user.photos.map((photo) => ({
       _id: photo._id,
-      url: `http://localhost:5000/${photo.data}`,
+      url: photo.data,
     }));
 
     res.set("Cache-Control", "no-store");
