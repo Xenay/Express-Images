@@ -43,7 +43,9 @@ router.get("/", async (req, res) => {
     const usersWithPhotos = users.map((user) => {
       const userData = {
         _id: user._id,
-        name: user.name, // Include other user properties as needed
+        name: user.name,
+        email: user.email,
+        equipment: user.equipment, // Include other user properties as needed
         photos: [],
       };
 
@@ -215,6 +217,38 @@ router.post("/add-entry/:id", upload.single("image"), async (req, res) => {
   } catch (error) {
     console.error("Error adding new entry:", error);
     res.status(400).send({ error: error.message });
+  }
+});
+
+//DELETE
+router.delete("/:userId/photos/:imageId", async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    const imageId = req.params.imageId;
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).send({ error: "User not found" });
+    }
+
+    // Find the image in the user's photos array by ID
+    const imageIndex = user.photos.findIndex((photo) => photo._id == imageId);
+
+    if (imageIndex === -1) {
+      return res.status(404).send({ error: "Image not found" });
+    }
+
+    // Remove the image from the user's photos array
+    user.photos.splice(imageIndex, 1);
+
+    // Save the updated user data
+    await user.save();
+
+    res.send({ success: true });
+  } catch (error) {
+    console.error("Error deleting image:", error);
+    res.status(500).send({ error: "Internal server error" });
   }
 });
 
